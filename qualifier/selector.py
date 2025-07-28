@@ -1,5 +1,5 @@
+from enum import Enum
 from node import Node
-from typing import Literal
 
 
 class NodeMethods:
@@ -17,6 +17,66 @@ class NodeMethods:
         return classes
 
 
+class SelectorType(Enum):
+    TAG = "tag"
+    ID = "id"
+    CLASS = "class"
+
+
+class SelectorPrefix:
+    items = (
+        ("#", SelectorType.ID),
+        (".", SelectorType.CLASS),
+    )
+
+    @classmethod
+    def from_type(cls, given_selector_type: SelectorType):
+        for char, selector_type in cls.items:
+            if selector_type == given_selector_type:
+                return char
+
+        return None
+
+    @classmethod
+    def from_char(cls, given_char: str):
+        for char, selector_type in cls.items:
+            if char == given_char:
+                return selector_type
+
+        return None
+
+    @classmethod
+    def is_prefix(cls, given_char: str):
+        return any(char == given_char for char, _ in cls.items)
+
+
+class SelectorPart:
+    def __init__(self, part: str):
+        self.part = part
+
+    @property
+    def type(self):
+        if len(self.part) == 0:
+            raise ValueError("Cannot get selector type from empty string")
+
+        selector_type = SelectorPrefix.from_char(self.part[0])
+        if selector_type is None:
+            return SelectorType.TAG
+
+        return selector_type
+
+    @property
+    def text(self):
+        if self.type == SelectorType.TAG:
+            return self.part
+
+        return self.part[1:]  # Without prefix
+
+    @property
+    def prefix(self):
+        return SelectorPrefix.from_type(self.type)
+
+
 class SelectorParts:
     def __init__(self, selector: str):
         self.selector = selector
@@ -25,58 +85,54 @@ class SelectorParts:
         self.ids: list[str] = []
         self.classes: list[str] = []
 
-        self.__separate()
+        self.__parse_selector()
 
-    def __separate(self):
-        class SelectorWord:
-            word = ""
-            word_type: Literal["tag", "class", "id", None] = None
+    def __generate_string_parts(self):
+        """
+        Break selector string into (still string) parts
 
-            @classmethod
-            def reset(cls):
-                cls.word = ""
-                cls.word_type = None
+        ```
+        selector = "article.container#card.bg-red-500.overflow-hidden"
 
-            @classmethod
-            def finalize(cls):
-                if cls.word_type == "tag":
-                    self.tags.append(cls.word)
-                if cls.word_type == "id":
-                    self.ids.append(cls.word)
-                if cls.word_type == "class":
-                    self.classes.append(cls.word)
+        [*__generate_string_parts(selector)] == [
+            "article",
+            ".container",
+            "#card",
+            ".bg-red-500",
+            ".overflow-hidden"
+        ]
+        ```
+        """
 
-                cls.reset()
-
-        class SelectorChar:
-            prefixes = ["#", "."]
-
-            @classmethod
-            def is_prefix(cls, char: str):
-                return char in cls.prefixes
+        word = ""
 
         for idx, char in enumerate(self.selector):
-            is_selector_prefix = SelectorChar.is_prefix(char)
+            is_prefix = SelectorPrefix.is_prefix(char)
 
-            if idx == 0 and not is_selector_prefix:
-                SelectorWord.word_type = "tag"
-                SelectorWord.word += char
-
+            if idx == 0:
+                word += char
                 continue
 
-            if is_selector_prefix:
-                SelectorWord.finalize()
+            if is_prefix:
+                yield word
+                word = ""
 
-                if char == ".":
-                    SelectorWord.word_type = "class"
-                if char == "#":
-                    SelectorWord.word_type = "id"
+            word += char
 
-                continue
+        yield word
 
-            SelectorWord.word += char
+    def __parse_selector(self):
+        for part_str in self.__generate_string_parts():
+            part = SelectorPart(part_str)
 
-        SelectorWord.finalize()
+            if part.type == SelectorType.TAG:
+                self.tags.append(part.text)
+
+            if part.type == SelectorType.ID:
+                self.ids.append(part.text)
+
+            if part.type == SelectorType.CLASS:
+                self.classes.append(part.text)
 
 
 class SingleSelector(SelectorParts):
