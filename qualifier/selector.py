@@ -17,7 +17,7 @@ class NodeMethods:
         return classes
 
 
-class SingleSelector:
+class SelectorParts:
     def __init__(self, selector: str):
         self.selector = selector
 
@@ -78,6 +78,8 @@ class SingleSelector:
 
         SelectorWord.finalize()
 
+
+class SingleSelector(SelectorParts):
     def __is_matching_tag(self, node: Node):
         if len(self.tags) == 0:
             return True
