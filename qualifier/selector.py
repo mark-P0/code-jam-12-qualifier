@@ -8,7 +8,7 @@ class NodeMethods:
         self.node = node
 
     @property
-    def classes(self, sep=" "):
+    def classes(self, *, sep=" "):
         class_attr = self.node.attributes.get("class")
         if class_attr is None:
             return []
@@ -182,10 +182,8 @@ class SelectorItem(SelectorItemParts):
 
 
 class SelectorList:
-    sep = ", "
-
-    def __init__(self, selector: str):
-        item_strs = selector.split(self.sep)
+    def __init__(self, selector: str, *, sep=", "):
+        item_strs = selector.split(sep)
 
         self.selectors = [SelectorItem(item) for item in item_strs]
 
