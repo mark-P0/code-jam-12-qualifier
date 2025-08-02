@@ -1,5 +1,6 @@
 from enum import Enum
 from node import Node
+from dataclasses import dataclass
 
 
 class NodeMethods:
@@ -23,34 +24,40 @@ class SelectorType(Enum):
     CLASS = "class"
 
 
+@dataclass
+class SelectorPrefixItem:
+    char: str
+    selector_type: SelectorType
+
+
 class SelectorPrefix:
     items = (
-        ("#", SelectorType.ID),
-        (".", SelectorType.CLASS),
+        SelectorPrefixItem(char="#", selector_type=SelectorType.ID),
+        SelectorPrefixItem(char=".", selector_type=SelectorType.CLASS),
     )
 
     @classmethod
-    def from_type(cls, given_selector_type: SelectorType):
-        for char, selector_type in cls.items:
-            if selector_type == given_selector_type:
-                return char
+    def from_type(cls, selector_type: SelectorType):
+        for item in cls.items:
+            if item.selector_type == selector_type:
+                return item.char
 
         return None
 
     @classmethod
-    def from_char(cls, given_char: str):
-        for char, selector_type in cls.items:
-            if char == given_char:
-                return selector_type
+    def from_char(cls, char: str):
+        for item in cls.items:
+            if item.char == char:
+                return item.selector_type
 
         return None
 
     @classmethod
-    def is_prefix(cls, given_char: str):
-        return any(char == given_char for char, _ in cls.items)
+    def is_prefix(cls, char: str):
+        return any(item.char == char for item in cls.items)
 
 
-class SelectorPart:
+class SelectorItemPart:
     def __init__(self, part: str):
         self.part = part
 
@@ -77,7 +84,7 @@ class SelectorPart:
         return SelectorPrefix.from_type(self.type)
 
 
-class SelectorParts:
+class SelectorItemParts:
     def __init__(self, selector: str):
         self.selector = selector
 
@@ -123,7 +130,7 @@ class SelectorParts:
 
     def __parse_selector(self):
         for part_str in self.__generate_string_parts():
-            part = SelectorPart(part_str)
+            part = SelectorItemPart(part_str)
 
             if part.type == SelectorType.TAG:
                 self.tags.append(part.text)
@@ -135,7 +142,7 @@ class SelectorParts:
                 self.classes.append(part.text)
 
 
-class SingleSelector(SelectorParts):
+class SelectorItem(SelectorItemParts):
     def __is_matching_tag(self, node: Node):
         if len(self.tags) == 0:
             return True
@@ -178,10 +185,12 @@ class SingleSelector(SelectorParts):
 
 
 class SelectorList:
-    def __init__(self, selector: str, sep=", "):
-        parts = selector.split(sep)
+    sep = ", "
 
-        self.selectors = [SingleSelector(part) for part in parts]
+    def __init__(self, selector: str):
+        item_strs = selector.split(self.sep)
+
+        self.selectors = [SelectorItem(item) for item in item_strs]
 
     def is_match(self, node: Node):
         has_any_matching_selector = any(
