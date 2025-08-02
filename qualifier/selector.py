@@ -88,11 +88,21 @@ class SelectorItemParts:
     def __init__(self, selector: str):
         self.selector = selector
 
-        self.tags: list[str] = []
-        self.ids: list[str] = []
-        self.classes: list[str] = []
-
-        self.__parse_selector()
+        self.tags = [
+            part.text
+            for part_str in self.__generate_string_parts()
+            if (part := SelectorItemPart(part_str)) and part.type == SelectorType.TAG
+        ]
+        self.ids = [
+            part.text
+            for part_str in self.__generate_string_parts()
+            if (part := SelectorItemPart(part_str)) and part.type == SelectorType.ID
+        ]
+        self.classes = [
+            part.text
+            for part_str in self.__generate_string_parts()
+            if (part := SelectorItemPart(part_str)) and part.type == SelectorType.CLASS
+        ]
 
     def __generate_string_parts(self):
         """
@@ -127,19 +137,6 @@ class SelectorItemParts:
             word += char
 
         yield word
-
-    def __parse_selector(self):
-        for part_str in self.__generate_string_parts():
-            part = SelectorItemPart(part_str)
-
-            if part.type == SelectorType.TAG:
-                self.tags.append(part.text)
-
-            if part.type == SelectorType.ID:
-                self.ids.append(part.text)
-
-            if part.type == SelectorType.CLASS:
-                self.classes.append(part.text)
 
 
 class SelectorItem(SelectorItemParts):
